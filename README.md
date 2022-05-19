@@ -1,1 +1,1 @@
-# ai_gest_lecture
+# ai_guest_lecture
