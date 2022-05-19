@@ -1,0 +1,675 @@
+
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Boolean SAT and Classical Planning</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <link rel="stylesheet" href="../dist/reveal.css">
+        <link rel="stylesheet" href="../plugin/highlight/monokai.css">
+        <link rel="stylesheet" href="../dist/theme/night.css" id="theme">
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <div class="slides">
+
+                <section data-transition="none">
+                    <h2> Fast Parallel PDR Algorithms for Planning </h2>
+                    <TABLE>
+                        <TR>
+                            <TD >
+                                <center>Marshall Clifton </center>
+                                <center>PhD Candidate</center>
+                            </TD>
+                        </TR>
+                    </TABLE>
+                </section>
+
+
+                <section data-transition="none">
+                    <h3>Overview</h3>
+
+                    <ul>
+                        <li>Boolean SAT</li>
+                        <li>Classical Planning</li>
+                        <li>Encoding Classical Planning as SAT</li>
+                        <li>Traditional Ramp-Up</li>
+                        <li>Property Directed Reachability</li>
+                        <li>Obligation Rescheduling</li>
+                        <li>Parallel PDR</li>
+                        <li>Parallel Decompositional PDR</li>
+                        <li>Results</li>
+                    </ul>
+
+                </section>
+
+                <section data-transition="none">
+                    <h3>Classical Planning</h3>
+                    <ul>
+                        <li>Safety checking in bounded model checking</li>
+                        <li>Can a finite transition system reach a state</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>STRIPS - Common Representation</h3>
+                    <ul>
+                        <li>Propositions set $P$</li>
+                        <ul>
+                            <li>Example: {$Light\_On, Window\_Open$}</li>
+                        </ul>
+                        <li>State: Boolean valuation over $P$</li>
+                        <li>Example of a state:</li>
+                        <ul>
+                            <li>Lights_On \(=\top \)</li>
+                            <li>Door_Open\(=\bot \)</li>
+                            <li>...</li>
+                        </ul>
+                        <li>Action: Transition between states</li>
+                        <li>Can I act from $I$ to $G$</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Boolean SAT</h3>
+                    <ul>
+                        <li>Find a model for a Boolean formula
+                            <ul>
+                                <li>Eg: $(a \land b) \lor (\neg b \land a)$</li>
+                            </ul>
+                        </li>
+                        <li>Common Representation CNF:
+                            <ul>
+                                <li>$literal$: variable or its negation</li>
+                                <li>$clause$: disjunction of literals</li>
+                                <li>CNF: Conjunction of clauses</li>
+                                <li>Eg: $(a \lor b) \land (b \lor \neg c) \land (a \lor \neg b \lor \neg c)$</li>
+                            </ul>
+                        </li>
+                        <li>CDCL is sound and complete</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Classical Planning</h3>
+                    <ul>
+                        <!-- Charltes Comment TODO -->
+                        <li>Safety checking in bounded model checking</li>
+                        <li>Can a finite transition system reach a state</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>STRIPS - Common Representation</h3>
+                    <ul>
+                        <li>Propositions set $P$</li>
+                        <ul>
+                            <li>Example: {$Light\_On, Window\_Open$}</li>
+                        </ul>
+                        <li>State: Boolean valuation over $P$</li>
+                        <li>Example of a state:</li>
+                        <ul>
+                            <li>Lights_On \(=\top \)</li>
+                            <li>Door_Open\(=\bot \)</li>
+                            <li>...</li>
+                        </ul>
+                        <li>Action: Transition between states</li>
+                        <li>Can I act from $I$ to $G$</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>STRIPS - Common Representation</h3>
+                    <ul>
+                        <li>Initial State $I$ </li>
+                        <li>Goal Condition $G$ - i.e. partial valuation over \(P\)</li>
+                        <li>Step: state, set of non-conflicting actions</li>
+                        <li>Action set $A$ where each $a \in A$ given by : </li>
+                        <ul>
+                            <li>$p\in \mbox{Pre}(a)$ satisfied in predecessor</li>
+                            <li>$p\in \mbox{Add}(a)$ satisfied in successor</li>
+                            <li>$p\in \mbox{Del}(a)$ not satisfied in successor</li>
+                        </ul>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Planning via SAT</h3>
+                    <ul>
+                        <li>CNF encoding planning problem at  horizon $h$</li>
+                        <li>Satisfiable iff plan of length $h$ or less exists</li>
+                        <li>SAT variable for proposition/action for steps</li>
+                        <ul>
+                            <li>$p@t$: proposition $p$ True at step $t$.<br> For every step</li>
+                            <li>$a@t$: action $a$ executed at step $t$.<br> For all but the last step</li>
+                        </ul>
+                        <li>Clauses enforce problem constraints</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Clauses</h3>
+                    <ul>
+                        <li>Initial State: $\bigwedge_{i\in I} i@0$</li>
+                        <li>Goal Condition: $\bigwedge_{g\in G} g@h$</li>
+                        <li>Action Set: $a \in A, t\in \{0,..,h-1\}$: </li>
+
+                        \[\begin{array}{lcll}
+                        \bigwedge_{p \in Pre(a)} a@t & \to & p@t &\land \\
+                        \bigwedge_{p \in Add(a)} a@t & \to & p@(t+1) &\land \\
+                        \bigwedge_{p \in Del(a)} a@t & \to & \neg{p@(t+1)} &
+                        \end{array}\]
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>More Clauses</h3>
+                    <ul>
+                        <li>Explanatory Frame Axiom: <br>$p \in P, t\in \{0,..,h-1\}$: </li>
+                        \[\begin{array}{l}
+                        (\neg p@t \land p@(t+1)) \to  \bigvee_{a \in A \; \text{s.t.} \; p \in Add(a)} a@t\\
+                        (p@t \land \neg p@(t+1)) \to  \bigvee_{a \in A   \; \text{s.t.} \; p \in Del(a)} a@t
+                        \end{array}\]
+
+                        <li>Interference Mutex Axiom: <br>$a, a' \in A, t\in \{0,..,h-1\}$: </li>
+                        $\exists p \text{ s.t. } \;p \in Del(a) \text{ and } p \in Pre(a')$
+                        <br>
+                        $\to \neg (a@t \land a'@t)$
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Invariants</h3>
+                    <ul>
+                        <li>Usually binary mutex clauses</li>
+                        <li>Eg. $\neg ON(A,B) \lor \neg ON(B,A)$</li>
+                        <li>Usually provided by preprocessing</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>$\forall$-Step Encoding</h3>
+                    <ul>
+                        <li>Allows non-conflicting actions </li>
+                        <li>$\mathbf{\exists}$-Step is another possibility</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Ramp-Up</h3>
+                    <ul>
+                        <li>Usually incomplete</li>
+                        <li>Series of bounded instances in a query strategy</li>
+                        <ul>
+                            <li>Geometric sequence<br>(eg $[1,2,4,8,16,...]$)</li>
+                            <li>Multiple horizons in parallel</li>
+                            <li>Use result from one to help another</li>
+                            <ul><li>i.e. incremental SAT</li></ul>
+                        </ul>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Property Directed Reachability</h3>
+                    <ul>
+                        <li>Sound and <b>complete</b> SAT planning procedure</li>
+                        <li>Maintains reachability information compactly</li>
+                        <li>Iteratively tightens that by restricting via nogoods</li>
+                        <li>Calls a SAT solver <b>a lot</b> on small subproblems</li>
+                    </ul>
+                    <div style="text-align:right;font-size:20px">
+                        <br>
+                        Bradley, A. R. 2011. SAT-Based Model Checking Without Unrolling.
+                        <br>
+                        Suda, M. 2014. Property Directed Reachability for Automated Planning.
+                    </div>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Property Directed Reachability</h3>
+                    <ul>
+                        <li>For each time step $N$ from the goal maintain:</li>
+                        <ul>
+                            <li>Layer information: - overapproximation of what can reach the goal</li>
+                            <li>States which may be able to reach the goal</li>
+                        </ul>
+                        <li>Process states until:</li>
+                        <ul>
+                            <li>Reach a goal state</li>
+                            <li>Show goal is unreachable</li>
+                        </ul>
+                    </ul>
+                    <!--
+                        COnsider time slices
+                        Maintain info for every step away from the goal
+                        What can't reach the goal in N steps - compact representation
+                        Set of states that might
+                        Sample and try progress
+                        Repeat untill N=0
+                        Otherwise use to learn nogood
+                        Can keep restricting to prove no path exists
+                    -->
+                </section>
+
+                <section data-transition="none">
+                    <h3>PDR - Reasoning</h3>
+                    <ul>
+                        <li>Robot trying to move to a room</li>
+                        <li>State:</li>
+                        <ul>
+                            <li>$\neg$Window_Open</li>
+                            <li>$\neg$Door_Open</li>
+                            <li>$\neg$Have_Key</li>
+                            <li>Light_On</li>
+                        </ul>
+                        <li>Reason:</li>
+                        <ul>
+                            <li>$\neg$Door_Open</li>
+                            <li>$\neg$Have_Key</li>
+                        </ul>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_1.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_2.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_3.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_4.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_5.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_6.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_7.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_8.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_9.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_10.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_11.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_12.png"  alt="Equivalent" />
+                    </section>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Obligation Rescheduling</h3>
+                    <ul>
+                        <li>Reprocess failed obligations at the next layer</li>
+                        <li>Not optimal length plans</li>
+                        <li>Generally faster in practice</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_1.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_2.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_3.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_4.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_5.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/pdr_6.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/OS_1.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/OS_2.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>OR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdr_label.png"  alt="Equivalent" />
+                        <img width="80%" height="80%"  src="images/OS_3.png"  alt="Equivalent" />
+                    </section>
+                </section>
+
+                <section data-transition="none">
+                    <h3>PDR - Algorithm</h3>
+                    <img width="60%" height="43%"  src="images/algorithm.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Serial PDR</h3>
+                    <img width="80%" height="80%"  src="images/PDR_single.png"  alt="Error" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Existing PDR Parallelizations</h3>
+                    <img width="80%" height="80%"  src="images/PDR_portfolio.png"  alt="Error" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Parallel State PDR</h3>
+                    <img width="80%" height="80%"  src="images/PDR_no_portfolio.png"  alt="Error" />
+                </section>
+
+
+                <section data-transition="none">
+                    <h3>Existing Parallelizations</h3>
+                    <ul>
+                        <li>Portfolio of PDR processes, sharing reasons</li>
+                        <li>Without obligation rescheduling</li>
+                        <li>Not in planning</li>
+                        <li>Reimplemented for benchmarking</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>PS-PDR</h3>
+                    <ul>
+                        <li>Single <em>orchestrator</em>, multiple <em>workers</em></li>
+                        <li>Orchestrator manages queue, checks for convergence, shares layer formula</li>
+                        <li>Workers process obligations using local copy of layer information</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>PS-PDR Worker</h3>
+                    <img width="80%" height="80%"  src="images/worker.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>PS-PDR Orchestrator</h3>
+                    <img width="60%" height="80%"  src="images/orchestrator.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Strongly Connected Components</h3>
+                    <img width="100%" height="100%"  src="images/SCC_demo1.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Strongly Connected Components</h3>
+                    <img width="100%" height="100%"  src="images/SCC_demo2.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Strongly Connected Components</h3>
+                    <img width="100%" height="100%"  src="images/SCC_demo3.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Strongly Connected Components</h3>
+                    <img width="100%" height="100%"  src="images/SCC_demo4.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Decompositional PDR</h3>
+                    <ul>
+                        <li>Project the problem into subproblems</li>
+                        <li>Solve the projections individually in parallel</li>
+                    </ul>
+                </section>
+
+
+                <section data-transition="none">
+                    <h3>Decomposition</h3>
+                    <ul>
+                        <li>Two locations: $L1, L2$</li>
+                        <li>Two packages: $P1, P2$</li>
+                        <li>One truck: $T$</li>
+                        <li>The truck can be at any location.</li>
+                        <li>Package can be at any location, or in the truck.</li>
+                        <li>Actions drive truck, or (un)load packages in place.</li>
+                    </ul>
+                </section>
+
+
+                <section data-transition="none">
+                    <h3>Dependency Graph</h3>
+                    <table>
+                        <tr>
+                            <td>
+                                <ul>
+                                    <li>$at(P1,L1) \rightarrow at(T,L1)$
+                                        <ul>
+                                            <li> Package location $depends$ on truck location </li>
+                                            <li> Not the other way around </li>
+                                        </ul>
+                                    </li>
+
+                                    <li>$at(P1,L1) \leftrightarrow at(P1,L2)$
+                                        <ul>
+                                            <li> Being at $A$ $depends$ on not being at $B$ </li>
+                                        </ul>
+                                    </li>
+
+                                </ul>
+                            </td>
+                            <td style="width:35%">
+                                <img width="1000%" height="1000%"  src="images/example_decomposition.png"  alt="Equivalent" />
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div style="text-align:right;font-size:20px">
+                        <br>
+                        Knoblock, C. A. 1994. Automatically generating abstractions for planning.
+                        <br>
+                        Williams, B. C.; and Nayak, P. P. 1997. A reactive planner for a model-based executive.
+                    </div>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Planning in Abstraction Refinement</h3>
+                    <ul>
+                        <li>Sort SCCs E.g. $SCC_{P1}, SCC_{P2}, SCC_T$</li>
+                        <li>Produce abstract plans to be refined</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>PD-PDR</h3>
+                    <ul>
+                        <li>Sound but not complete</li>
+                        <li>Sort SCCs</li>
+                        <li>For each SCC:
+                            <ul>
+                                <li>Plan for relevant goals</li>
+                                <li>Return everything else to its starting position.</li>
+                            </ul>
+                        </li>
+                        <li>If all have plans, concatenate to form concrete plan.</li>
+                        <li>Check concatenation</li>
+                        <li>Instead plan for each SCC in parallel</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_0.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_1.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_2.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_3.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_4.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_5.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_6.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_7.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_8.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_9.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_10.png"  alt="Equivalent" />
+                    </section>
+
+                    <section data-transition="none">
+                        <h3>PD-PDR - Example</h3>
+                        <img width="80%" height="80%"  src="images/pdpdr_11.png"  alt="Equivalent" />
+                    </section>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Results</h3>
+                    <img width="100%" height="100%"  src="images/results_graph_inverted.png"  alt="Equivalent" />
+                    <img width="100%" height="100%"  src="images/graph_legend_inverted.png"  alt="Equivalent" />
+                </section>
+
+                <section data-transition="none">
+                    <h3>Thank You</h3>
+                    <br>
+                    Interested in a related honours project? 
+                    <br>
+                    Contact me (Marshall Clifton) or Charles Gretton
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="../dist/reveal.js"></script>
+        <script src="../plugin/math/math.js"></script>
+        <script src="../plugin/highlight/highlight.js"></script>
+        <script>
+            Reveal.initialize({
+                history: true,
+                transition: 'linear',
+
+                math: {
+                    // mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js',
+                    config: 'TeX-AMS_HTML-full',
+                    TeX: {
+                        Macros: {
+                            R: '\\mathbb{R}',
+                            set: [ '\\left\\{#1 \\; ; \\; #2\\right\\}', 2 ]
+                        }
+                    }
+                },
+
+                plugins: [ RevealMath, RevealHighlight ]
+            });
+        </script>
+
+    </body>
+</html>
