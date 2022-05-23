@@ -51,34 +51,7 @@
                 </section>
 
                 <section data-transition="none">
-                    <h3>Classical Planning</h3>
-                    <ul>
-                        <li>Safety checking in bounded model checking</li>
-                        <li>Can a finite transition system reach a state</li>
-                    </ul>
-                </section>
-
-                <section data-transition="none">
-                    <h3>STRIPS - Common Representation</h3>
-                    <ul>
-                        <li>Propositions set $P$</li>
-                        <ul>
-                            <li>Example: {$Light\_On, Window\_Open$}</li>
-                        </ul>
-                        <li>State: Boolean valuation over $P$</li>
-                        <li>Example of a state:</li>
-                        <ul>
-                            <li>Lights_On \(=\top \)</li>
-                            <li>Door_Open\(=\bot \)</li>
-                            <li>...</li>
-                        </ul>
-                        <li>Action: Transition between states</li>
-                        <li>Can I act from $I$ to $G$</li>
-                    </ul>
-                </section>
-
-                <section data-transition="none">
-                    <h3>Boolean SAT</h3>
+                    <h3>Boolean SAT - Representation</h3>
                     <ul>
                         <li>Find a model for a Boolean formula
                             <ul>
@@ -87,13 +60,32 @@
                         </li>
                         <li>Common Representation CNF:
                             <ul>
-                                <li>$literal$: variable or its negation</li>
+                                <li>$literal$: proposition or its negation</li>
                                 <li>$clause$: disjunction of literals</li>
                                 <li>CNF: Conjunction of clauses</li>
                                 <li>Eg: $(a \lor b) \land (b \lor \neg c) \land (a \lor \neg b \lor \neg c)$</li>
+                                <li>Each clause is an additional constraint</li>
                             </ul>
                         </li>
-                        <li>CDCL is sound and complete</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Boolean SAT - Solving</h3>
+                    <ul>
+                        <li>Stochastic Local Search (SLS)
+                            <ul>
+                                <li>Treated as an optimization problem</li>
+                                <li>Over space of assignments: minimize number of UNSAT clauses - stop if 0</li>
+                                <li>Sound but incomplete - cannot prove UNSAT</li>
+                            </ul>
+                        </li>
+                        <li>Conflict Driven Clause Learning (CDCL)
+                            <ul>
+                                <li>Decision Procedure</li>
+                                <li>Sound and complete</li>
+                            </ul>
+                        </li>
                     </ul>
                 </section>
 
@@ -109,15 +101,15 @@
                 <section data-transition="none">
                     <h3>STRIPS - Common Representation</h3>
                     <ul>
-                        <li>Propositions set $P$</li>
+                        <li>Fluent set $F$</li>
                         <ul>
-                            <li>Example: {$Light\_On, Window\_Open$}</li>
+                            <li>Example: {$Light\_On, Window\_Open, ...$}</li>
                         </ul>
-                        <li>State: Boolean valuation over $P$</li>
+                        <li>State: Boolean valuation over $F$</li>
                         <li>Example of a state:</li>
                         <ul>
                             <li>Lights_On \(=\top \)</li>
-                            <li>Door_Open\(=\bot \)</li>
+                            <li>Window_Open\(=\bot \)</li>
                             <li>...</li>
                         </ul>
                         <li>Action: Transition between states</li>
@@ -129,13 +121,12 @@
                     <h3>STRIPS - Common Representation</h3>
                     <ul>
                         <li>Initial State $I$ </li>
-                        <li>Goal Condition $G$ - i.e. partial valuation over \(P\)</li>
-                        <li>Step: state, set of non-conflicting actions</li>
+                        <li>Goal Condition $G$ - i.e. partial valuation over \(F\)</li>
                         <li>Action set $A$ where each $a \in A$ given by : </li>
                         <ul>
-                            <li>$p\in \mbox{Pre}(a)$ satisfied in predecessor</li>
-                            <li>$p\in \mbox{Add}(a)$ satisfied in successor</li>
-                            <li>$p\in \mbox{Del}(a)$ not satisfied in successor</li>
+                            <li>$f\in \mbox{Pre}(a)$ satisfied in predecessor</li>
+                            <li>$f\in \mbox{Add}(a)$ satisfied in successor</li>
+                            <li>$f\in \mbox{Del}(a)$ not satisfied in successor</li>
                         </ul>
                     </ul>
                 </section>
@@ -143,11 +134,28 @@
                 <section data-transition="none">
                     <h3>Planning via SAT</h3>
                     <ul>
-                        <li>CNF encoding planning problem at  horizon $h$</li>
+                        <li>Step: state, set of actions executing on that state.</li>
+                        <li>Action set must be non-conflicting - can be executed in any order</li>
+
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Planning via SAT</h3>
+                    <ul>
+                        <li>Bound the number of steps with horizon $h$</li>
+                        <li>SAT encoding of problem at horizon $h$ - in CNF</li>
                         <li>Satisfiable iff plan of length $h$ or less exists</li>
-                        <li>SAT variable for proposition/action for steps</li>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Planning via SAT</h3>
+                    <ul>
+                        <li>Direct Encoding - plan can be efficiently extracted</li>
+                        <li>SAT proposition for fluent/action for most/all steps</li>
                         <ul>
-                            <li>$p@t$: proposition $p$ True at step $t$.<br> For every step</li>
+                            <li>$f@t$: fluent $f$ True at step $t$.<br> For every step</li>
                             <li>$a@t$: action $a$ executed at step $t$.<br> For all but the last step</li>
                         </ul>
                         <li>Clauses enforce problem constraints</li>
@@ -162,9 +170,9 @@
                         <li>Action Set: $a \in A, t\in \{0,..,h-1\}$: </li>
 
                         \[\begin{array}{lcll}
-                        \bigwedge_{p \in Pre(a)} a@t & \to & p@t &\land \\
-                        \bigwedge_{p \in Add(a)} a@t & \to & p@(t+1) &\land \\
-                        \bigwedge_{p \in Del(a)} a@t & \to & \neg{p@(t+1)} &
+                        \bigwedge_{f \in Pre(a)} a@t & \to & f@t &\land \\
+                        \bigwedge_{f \in Add(a)} a@t & \to & f@(t+1) &\land \\
+                        \bigwedge_{f \in Del(a)} a@t & \to & \neg{f@(t+1)} &
                         \end{array}\]
                     </ul>
                 </section>
@@ -172,14 +180,14 @@
                 <section data-transition="none">
                     <h3>More Clauses</h3>
                     <ul>
-                        <li>Explanatory Frame Axiom: <br>$p \in P, t\in \{0,..,h-1\}$: </li>
+                        <li>Explanatory Frame Axiom: <br>$f \in F, t\in \{0,..,h-1\}$: </li>
                         \[\begin{array}{l}
-                        (\neg p@t \land p@(t+1)) \to  \bigvee_{a \in A \; \text{s.t.} \; p \in Add(a)} a@t\\
-                        (p@t \land \neg p@(t+1)) \to  \bigvee_{a \in A   \; \text{s.t.} \; p \in Del(a)} a@t
+                        (\neg f@t \land f@(t+1)) \to  \bigvee_{a \in A \; \text{s.t.} \; f \in Add(a)} a@t\\
+                        (f@t \land \neg f@(t+1)) \to  \bigvee_{a \in A \; \text{s.t.} \; f \in Del(a)} a@t
                         \end{array}\]
 
                         <li>Interference Mutex Axiom: <br>$a, a' \in A, t\in \{0,..,h-1\}$: </li>
-                        $\exists p \text{ s.t. } \;p \in Del(a) \text{ and } p \in Pre(a')$
+                        $\exists f \text{ s.t. } \;f \in Del(a) \text{ and } f \in Pre(a')$
                         <br>
                         $\to \neg (a@t \land a'@t)$
                     </ul>
@@ -192,15 +200,21 @@
                         <li>Eg. $\neg ON(A,B) \lor \neg ON(B,A)$</li>
                         <li>Usually provided by preprocessing</li>
                     </ul>
+                    <div style="text-align:right;font-size:20px">
+                        <br>
+                        Rintanen, J. 2012. Planning as Satisfiability: Heuristics.
+                    </div>
                 </section>
 
+                <!-- cut
                 <section data-transition="none">
-                    <h3>$\forall$-Step Encoding</h3>
+                    <h3>Alternative Encoding</h3>
                     <ul>
-                        <li>Allows non-conflicting actions </li>
+                        <li>This is the $\forall$-Step Encoding</li>
                         <li>$\mathbf{\exists}$-Step is another possibility</li>
                     </ul>
                 </section>
+                -->
 
                 <section data-transition="none">
                     <h3>Ramp-Up</h3>
@@ -213,6 +227,26 @@
                             <li>Use result from one to help another</li>
                             <ul><li>i.e. incremental SAT</li></ul>
                         </ul>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Completeness Thresholds - Upper Bounds</h3>
+                    <ul>
+                        <li>Makes SAT-based Planning <b>Complete</b></li>
+                        <li>Completeness Threshold: plan exist at this horizon iff one exist at all</li>
+                    <br>
+                    <br>
+                    </ul>
+                </section>
+
+                <section data-transition="none">
+                    <h3>Completeness Thresholds - Upper Bounds</h3>
+                    <ul>
+                        <li>Makes SAT-based Planning <b>Complete</b></li>
+                        <li>Completeness Threshold: plan exist at this horizon iff one exist at all</li>
+                        <li>Trivial bound: $2^{|F|}-1$</li>
+                        <li>Methods exist for finding smaller thresholds</li>
                     </ul>
                 </section>
 
@@ -487,7 +521,7 @@
                 </section>
 
                 <section data-transition="none">
-                    <h3>Decompositional PDR</h3>
+                    <h3>Parallel Decompositional PDR</h3>
                     <ul>
                         <li>Project the problem into subproblems</li>
                         <li>Solve the projections individually in parallel</li>
@@ -496,14 +530,15 @@
 
 
                 <section data-transition="none">
-                    <h3>Decomposition</h3>
+                    <h3>Example Logistics Domain</h3>
                     <ul>
                         <li>Two locations: $L1, L2$</li>
                         <li>Two packages: $P1, P2$</li>
                         <li>One truck: $T$</li>
-                        <li>The truck can be at any location.</li>
-                        <li>Package can be at any location, or in the truck.</li>
+                        <li>The truck can be at either location.</li>
+                        <li>Package can be at either location, or in the truck.</li>
                         <li>Actions drive truck, or (un)load packages in place.</li>
+                        <li>What invariants might be found?</li>
                     </ul>
                 </section>
 
@@ -555,6 +590,7 @@
                     <h3>PD-PDR</h3>
                     <ul>
                         <li>Sound but not complete</li>
+                        <li>Planner interchangeable</li>
                         <li>Sort SCCs</li>
                         <li>For each SCC:
                             <ul>
@@ -638,10 +674,22 @@
 
                 <section data-transition="none">
                     <h3>Thank You</h3>
-                    <br>
                     Interested in a related honours project? 
                     <br>
-                    Contact me (Marshall Clifton) or Charles Gretton
+                    Contact me (Marshall Clifton), Charles Gretton or Mark Burgess (first.last@anu.edu.au)
+                    <br>
+                    <br>
+                    Scholarships may be available for Australian Citizens.
+                    <br>
+                    <br>
+                    Slides: 
+                    <a href="https://clifton-m.github.io/ai_guest_lecture/slides/index.html">https://clifton-m.github.io/ai_guest_lecture/slides/index.html</a>
+                    <div style="text-align:right;font-size:20px">
+                        <br>
+                        Clifton, M., Gretton, C. 2021. Computing Multiple PDR Steps in a Single SAT Call and a PDR Comparison to Madagascar with Completeness Thresholds.
+                        <br>
+                        Clifton, M., Gretton, C. 2022. Fast Parallel PDR Algorithms for Planning.
+                    </div>
                 </section>
 
             </div>
